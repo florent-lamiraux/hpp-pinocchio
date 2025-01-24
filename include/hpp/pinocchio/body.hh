@@ -53,7 +53,7 @@ class HPP_PINOCCHIO_DLLAPI Body {
   /// \name Construction and copy and destruction
   /// @{
   /// Constructor
-  Body(DeviceWkPtr_t device, JointIndex joint);
+  Body(DeviceConstWkPtr_t device, JointIndex joint);
 
   virtual ~Body() {}
   /// @}
@@ -112,7 +112,7 @@ class HPP_PINOCCHIO_DLLAPI Body {
   const ::pinocchio::Frame& frame() const;
   ::pinocchio::Frame& frame();
 
-  DeviceWkPtr_t devicePtr;
+  DeviceConstWkPtr_t devicePtr;
   JointIndex jointIndex;
   mutable FrameIndex
       frameIndex;  // In pinocchio, bodies are stored as frames of type BODY.

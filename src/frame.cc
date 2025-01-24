@@ -50,7 +50,7 @@ void moveFrame(Model& model, GeomModel& geomModel, const FrameIndex& pF,
 }
 }  // namespace
 
-Frame::Frame(DeviceWkPtr_t device, FrameIndex indexInFrameList)
+Frame::Frame(DeviceConstWkPtr_t device, FrameIndex indexInFrameList)
     : devicePtr_(device), frameIndex_(indexInFrameList) {
   assert(devicePtr_.lock());
   assert(devicePtr_.lock()->modelPtr());
@@ -89,7 +89,7 @@ Frame Frame::parentFrame() const {
 bool Frame::isFixed() const { return pinocchio().type != ::pinocchio::JOINT; }
 
 JointPtr_t Frame::joint() const {
-  return Joint::create(devicePtr_, pinocchio().parent);
+  return Joint::create(robot(), pinocchio().parent);
 }
 
 bool Frame::isRootFrame() const { return index() == 0; }
@@ -208,6 +208,18 @@ void Frame::positionInParentFrame(const Transform3s& p) {
           me.placement * fMj * m.jointPlacements[f.parent];
     }
   }
+}
+
+/// Access robot owning the object
+DeviceConstPtr_t Frame::robot() const {
+  selfAssert();
+  return devicePtr_.lock()->shared_from_this();
+}
+
+/// Access robot owning the object
+DevicePtr_t Frame::robot() {
+  selfAssert();
+  return devicePtr_.lock()->shared_from_this();
 }
 
 std::ostream& Frame::display(std::ostream& os) const {

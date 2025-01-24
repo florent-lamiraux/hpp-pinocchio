@@ -65,7 +65,7 @@ std::ostream& Gripper::print(std::ostream& os) const {
 DevicePtr_t Gripper::device() const {
   DevicePtr_t d = device_.lock();
   assert(d);
-  return d;
+  return d->shared_from_this();
 }
 }  // namespace pinocchio
 }  // namespace hpp

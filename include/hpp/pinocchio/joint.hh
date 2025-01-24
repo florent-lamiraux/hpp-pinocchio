@@ -65,13 +65,13 @@ class HPP_PINOCCHIO_DLLAPI Joint {
   /// \return shared pointer to result if indexInJointList > 0, empty
   ///         shared pointer if indexInJointList == 0.
   /// \note indices of device start at 1 since 0 corresponds to "universe".
-  static JointPtr_t create(DeviceWkPtr_t device, JointIndex indexInJointList);
+  static JointPtr_t create(DeviceConstPtr_t device, JointIndex indexInJointList);
 
   /// Constructor
   /// \param indexInJointList index in pinocchio vector of joints
   ///        (pinocchio::ModelTpl::joints). Should be > 0.
   /// \note indices of device start at 1 since 0 corresponds to "universe".
-  Joint(DeviceWkPtr_t device, JointIndex indexInJointList);
+  Joint(DeviceConstPtr_t device, JointIndex indexInJointList);
 
   ~Joint() {}
   /// \}
@@ -214,9 +214,7 @@ class HPP_PINOCCHIO_DLLAPI Joint {
   // -----------------------------------------------------------------------
 
   /// Access robot owning the object
-  DeviceConstPtr_t robot() const { return devicePtr.lock(); }
-  /// Access robot owning the object
-  DevicePtr_t robot() { return devicePtr.lock(); }
+  DeviceConstPtr_t robot() const;
 
   /// \name Body linked to the joint
   /// \{
@@ -260,7 +258,7 @@ class HPP_PINOCCHIO_DLLAPI Joint {
 
  protected:
   value_type maximalDistanceToParent_;
-  DeviceWkPtr_t devicePtr;
+  DeviceConstWkPtr_t devicePtr;
   JointIndex jointIndex;
   std::vector<JointIndex> children;
 

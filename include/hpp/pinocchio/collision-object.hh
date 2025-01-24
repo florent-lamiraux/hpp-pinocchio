@@ -55,7 +55,7 @@ class HPP_PINOCCHIO_DLLAPI CollisionObject {
   typedef std::map<JointIndex, GeomIndexList> ObjectVec_t;
 
   /// Constructor for object of the device.
-  CollisionObject(DevicePtr_t device, const GeomIndex geom);
+  CollisionObject(DeviceConstPtr_t device, const GeomIndex geom);
 
   /// Constructor for obstacles (object attached to the environment)
   /// It is not attached to a Device.
@@ -119,7 +119,7 @@ class HPP_PINOCCHIO_DLLAPI CollisionObject {
   GeomData& geomData(DeviceData& d) const;
   const GeomData& geomData(const DeviceData& d) const;
 
-  DevicePtr_t devicePtr;
+  DeviceConstPtr_t devicePtr;
   GeomModelPtr_t geomModel_;
   // If geomData_ is not null when the object is part of the environment.
   // Otherwise, it is null.

@@ -84,7 +84,7 @@ const std::string& Body::name() const {
 
 JointPtr_t Body::joint() const {
   selfAssert();
-  return Joint::create(devicePtr, jointIndex);
+  return Joint::create(devicePtr.lock(), jointIndex);
 }
 
 const vector3_t& Body::localCenterOfMass() const {

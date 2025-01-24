@@ -48,7 +48,7 @@ class HPP_PINOCCHIO_DLLAPI Frame {
   /// \param device pointer on the device the frame is belonging to.
   /// \param indexInFrameList index of the frame, i.e. frame =
   /// device.model.frames[index]
-  Frame(DeviceWkPtr_t device, FrameIndex indexInFrameList);
+  Frame(DeviceConstWkPtr_t device, FrameIndex indexInFrameList);
 
   ~Frame() {}
   /// \}
@@ -115,15 +115,7 @@ class HPP_PINOCCHIO_DLLAPI Frame {
   // -----------------------------------------------------------------------
 
   /// Access robot owning the object
-  DeviceConstPtr_t robot() const {
-    selfAssert();
-    return devicePtr_.lock();
-  }
-  /// Access robot owning the object
-  DevicePtr_t robot() {
-    selfAssert();
-    return devicePtr_.lock();
-  }
+ DeviceConstPtr_t robot() const;
 
   /// Display frame
   virtual std::ostream& display(std::ostream& os) const;
@@ -138,7 +130,7 @@ class HPP_PINOCCHIO_DLLAPI Frame {
   /// \}
 
  private:
-  DeviceWkPtr_t devicePtr_;
+  DeviceConstWkPtr_t devicePtr_;
   FrameIndex frameIndex_;
   std::vector<FrameIndex> children_;
 

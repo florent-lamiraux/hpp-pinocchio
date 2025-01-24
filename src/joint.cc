@@ -49,14 +49,14 @@ namespace pinocchio {
 using ::pinocchio::LOCAL;
 using ::pinocchio::WORLD;
 
-JointPtr_t Joint::create(DeviceWkPtr_t device, JointIndex indexInJointList) {
+JointPtr_t Joint::create(DeviceConstPtr_t device, JointIndex indexInJointList) {
   if (indexInJointList == 0)
     return JointPtr_t();
   else
     return JointPtr_t(new Joint(device, indexInJointList));
 }
 
-Joint::Joint(DeviceWkPtr_t device, JointIndex indexInJointList)
+Joint::Joint(DeviceConstPtr_t device, JointIndex indexInJointList)
     : maximalDistanceToParent_(-1),
       devicePtr(device),
       jointIndex(indexInJointList) {
@@ -100,7 +100,7 @@ JointPtr_t Joint::parentJoint() const {
   if (idParent == 0)
     return JointPtr_t();
   else
-    return JointPtr_t(new Joint(devicePtr, idParent));
+    return JointPtr_t(new Joint(robot(), idParent));
 }
 
 const std::string& Joint::name() const {
@@ -138,7 +138,7 @@ std::size_t Joint::numberChildJoints() const { return children.size(); }
 JointPtr_t Joint::childJoint(std::size_t rank) const {
   selfAssert();
   assert(rank < children.size());
-  return JointPtr_t(new Joint(devicePtr, children[rank]));
+  return JointPtr_t(new Joint(robot(), children[rank]));
 }
 
 const Transform3s& Joint::positionInParentFrame() const {
@@ -528,8 +528,15 @@ JointJacobian_t& Joint::jacobian(DeviceData& d, const bool local) const {
   return jacobian;
 }
 
+/// Access robot owning the object
+DeviceConstPtr_t Joint::robot() const
+{
+  DeviceConstPtr_t res(devicePtr.lock());
+  return res;
+}
+
 BodyPtr_t Joint::linkedBody() const {
-  return BodyPtr_t(new Body(devicePtr.lock(), jointIndex));
+  return BodyPtr_t(new Body(robot(), jointIndex));
 }
 
 std::ostream& Joint::display(std::ostream& os) const {

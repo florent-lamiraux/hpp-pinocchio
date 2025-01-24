@@ -63,7 +63,7 @@ const ::pinocchio::FrameType all_joint_type =
     (::pinocchio::FrameType)(::pinocchio::JOINT | ::pinocchio::FIXED_JOINT);
 
 Device::Device(const std::string& name)
-    : AbstractDevice(), name_(name), weakPtr_() {
+  : AbstractDevice(), std::enable_shared_from_this<Device>(), name_(name) {
   invalidate();
   createData();
   createGeomData();
@@ -72,12 +72,11 @@ Device::Device(const std::string& name)
 }
 
 Device::Device(const Device& other)
-    : AbstractDevice(other.model_, other.geomModel_),
+  : AbstractDevice(other.model_, other.geomModel_), std::enable_shared_from_this<Device>(other),
       d_(other.d_),
       name_(other.name_),
       grippers_(),
       extraConfigSpace_(other.extraConfigSpace_),
-      weakPtr_(),
       datas_() {
   numberDeviceData(other.numberDeviceData());
 }
@@ -104,7 +103,7 @@ DevicePtr_t Device::create(const std::string& name) {
 }
 
 // static method
-DevicePtr_t Device::createCopy(const DevicePtr_t& other) {
+DevicePtr_t Device::createCopy(const DeviceConstPtr_t& other) {
   DevicePtr_t res = DevicePtr_t(new Device(*other));  // init shared ptr
   res->initCopy(res, *other);
   return res;
@@ -120,7 +119,6 @@ DevicePtr_t Device::createCopyConst(const DeviceConstPtr_t& device) {
 }
 
 void Device::init(const DeviceWkPtr_t& weakPtr) {
-  weakPtr_ = weakPtr;
   d_.devicePtr_ = weakPtr;
 }
 
@@ -169,7 +167,7 @@ void Device::removeJoints(const std::vector<std::string>& jointNames,
   // update the grippers
   std::transform(grippers_.begin(), grippers_.end(), grippers_.begin(),
                  [this](GripperPtr_t g) {
-                   return Gripper::create(g->name(), this->weakPtr_.lock());
+                   return Gripper::create(g->name(), this->shared_from_this());
                  });
 
   invalidate();
@@ -184,12 +182,11 @@ void Device::removeJoints(const std::vector<std::string>& jointNames,
 /* ---------------------------------------------------------------------- */
 
 JointPtr_t Device::rootJoint() const {
-  return Joint::create(weakPtr_.lock(), 1);
+  return Joint::create(shared_from_this(), 1);
 }
 
 Frame Device::rootFrame() const {
-  return Frame(weakPtr_.lock(),
-               model().getFrameId("root_joint", all_joint_type));
+  return Frame(shared_from_this(), model().getFrameId("root_joint", all_joint_type));
 }
 
 size_type Device::nbJoints() const {
@@ -198,7 +195,7 @@ size_type Device::nbJoints() const {
 
 JointPtr_t Device::jointAt(const size_type& i) const {
   assert(i < nbJoints());
-  return Joint::create(weakPtr_.lock(), JointIndex(i + 1));
+  return Joint::create(shared_from_this(), JointIndex(i + 1));
 }
 
 JointPtr_t Device::getJointAtConfigRank(const size_type& r) const {
@@ -207,7 +204,7 @@ JointPtr_t Device::getJointAtConfigRank(const size_type& r) const {
   BOOST_FOREACH (const JointModel& j, model().joints) {
     if (j.id() == 0) continue;  // Skip "universe" joint
     const size_type iq = r - j.idx_q();
-    if (0 <= iq && iq < j.nq()) return Joint::create(weakPtr_.lock(), j.id());
+    if (0 <= iq && iq < j.nq()) return Joint::create(shared_from_this(), j.id());
   }
   assert(false && "The joint at config rank has not been found");
   return JointPtr_t();
@@ -217,7 +214,7 @@ JointPtr_t Device::getJointAtVelocityRank(const size_type& r) const {
   BOOST_FOREACH (const JointModel& j, model().joints) {
     if (j.id() == 0) continue;  // Skip "universe" joint
     const size_type iv = r - j.idx_v();
-    if (0 <= iv && iv < j.nv()) return Joint::create(weakPtr_.lock(), j.id());
+    if (0 <= iv && iv < j.nv()) return Joint::create(shared_from_this(), j.id());
   }
   assert(false && "The joint at velocity rank has not been found");
   return JointPtr_t();
@@ -228,7 +225,7 @@ JointPtr_t Device::getJointByName(const std::string& name) const {
     throw std::runtime_error("Device " + name_ +
                              " does not have any joint named " + name);
   JointIndex id = model().getJointId(name);
-  return Joint::create(weakPtr_.lock(), id);
+  return Joint::create(shared_from_this(), id);
 }
 
 JointPtr_t Device::getJointByBodyName(const std::string& name) const {
@@ -238,7 +235,7 @@ JointPtr_t Device::getJointByBodyName(const std::string& name) const {
       JointIndex jointId = model().frames[bodyId].parent;
       // assert(jointId>=0);
       assert((std::size_t)jointId < model().joints.size());
-      return Joint::create(weakPtr_.lock(), jointId);
+      return Joint::create(shared_from_this(), jointId);
     }
   }
   throw std::runtime_error("Device " + name_ +
@@ -250,7 +247,7 @@ Frame Device::getFrameByName(const std::string& name) const {
     throw std::logic_error("Device " + name_ +
                            " does not have any frame named " + name);
   FrameIndex id = model().getFrameId(name);
-  return Frame(weakPtr_.lock(), id);
+  return Frame(shared_from_this(), id);
 }
 
 size_type Device::configSize() const {
@@ -276,8 +273,8 @@ void Device::resizeState() {
   configSpaceRnxSOn_ = LiegroupSpace::empty();
   const Model& m(model());
   for (JointIndex i = 1; i < m.joints.size(); ++i) {
-    *configSpace_ *= Joint(weakPtr_, i).configurationSpace();
-    *configSpaceRnxSOn_ *= Joint(weakPtr_, i).RnxSOnConfigurationSpace();
+    *configSpace_ *= Joint(shared_from_this(), i).configurationSpace();
+    *configSpaceRnxSOn_ *= Joint(shared_from_this(), i).RnxSOnConfigurationSpace();
   }
   if (extraConfigSpace_.dimension() > 0) {
     LiegroupSpacePtr_t extra =
@@ -329,7 +326,7 @@ std::ostream& Device::print(std::ostream& os) const {
 /* ---------------------------------------------------------------------- */
 
 BodyPtr_t Device::obstacles() const {
-  return BodyPtr_t(new Body(weakPtr_.lock(), 0));
+  return BodyPtr_t(new Body(shared_from_this(), 0));
 }
 
 size_type Device::nbObjects() const {
@@ -339,7 +336,7 @@ size_type Device::nbObjects() const {
 CollisionObjectPtr_t Device::objectAt(const size_type& i) const {
   assert(i < nbObjects());
   return CollisionObjectPtr_t(
-      new CollisionObject(weakPtr_.lock(), (GeomIndex)i));
+      new CollisionObject(shared_from_this(), (GeomIndex)i));
 }
 
 bool Device::collisionTest(const bool stopAtFirstCollision) {
@@ -418,7 +415,7 @@ coal::AABB Device::computeAABB() const {
   // Compute maximal distance to parent joint.
   std::vector<value_type> maxDistToParent(m.joints.size(), 0);
   for (JointIndex i = 1; i < m.joints.size(); ++i) {
-    Joint joint(weakPtr_.lock(), i);
+    Joint joint(shared_from_this(), i);
     joint.computeMaximalDistanceToParent();
     maxDistToParent[i] = joint.maximalDistanceToParent();
   }
@@ -440,7 +437,7 @@ coal::AABB Device::computeAABB() const {
       maxDistToRoot[i] = maxDistToRoot[m.parents[i]] + maxDistToParent[i];
     }
 
-    Body body(weakPtr_.lock(), i);
+    Body body(shared_from_this(), i);
     distances[i] = body.radius() + maxDistToRoot[i];
 
     maxRadius.back() = std::max(maxRadius.back(), distances[i]);
@@ -523,8 +520,6 @@ void Device::save(Archive& ar, const unsigned int version) const {
         [](const GripperPtr_t& g) -> FrameIndex { return g->frameId(); });
     ar& BOOST_SERIALIZATION_NVP(grippers);
     ar& BOOST_SERIALIZATION_NVP(jointConstraints_);
-    ar& BOOST_SERIALIZATION_NVP(weakPtr_);
-
     ar& BOOST_SERIALIZATION_NVP(extraConfigSpace_.dimension_);
     ar& BOOST_SERIALIZATION_NVP(extraConfigSpace_.lowerBounds_);
     ar& BOOST_SERIALIZATION_NVP(extraConfigSpace_.upperBounds_);
@@ -554,7 +549,6 @@ void Device::load(Archive& ar, const unsigned int version) {
     std::vector<FrameIndex> grippers;
     ar& BOOST_SERIALIZATION_NVP(grippers);
     ar& BOOST_SERIALIZATION_NVP(jointConstraints_);
-    ar& BOOST_SERIALIZATION_NVP(weakPtr_);
 
     ar& BOOST_SERIALIZATION_NVP(extraConfigSpace_.dimension_);
     ar& BOOST_SERIALIZATION_NVP(extraConfigSpace_.lowerBounds_);
@@ -568,7 +562,7 @@ void Device::load(Archive& ar, const unsigned int version) {
       grippers_.reserve(grippers.size());
       std::transform(grippers.begin(), grippers.end(), grippers_.begin(),
                      [this](FrameIndex i) -> GripperPtr_t {
-                       return Gripper::create(model_->frames[i].name, weakPtr_.lock());
+                       return Gripper::create(model_->frames[i].name, shared_from_this());
                      });
       createData();
       createGeomData();

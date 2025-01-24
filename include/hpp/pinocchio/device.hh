@@ -57,7 +57,8 @@ namespace pinocchio {
 /// to the newly created object.  \sa Smart pointers
 /// documentation:
 /// http://www.boost.org/libs/smart_ptr/smart_ptr.htm
-class HPP_PINOCCHIO_DLLAPI Device : public AbstractDevice {
+class HPP_PINOCCHIO_DLLAPI Device : public AbstractDevice,
+    public std::enable_shared_from_this<Device> {
   friend class Joint;
   friend class Frame;
   friend class DeviceSync;
@@ -79,13 +80,13 @@ class HPP_PINOCCHIO_DLLAPI Device : public AbstractDevice {
   /// A new Pinocchio "data" is created.
   /// As the model is not copied, cloning is a non constant operation. \sa
   /// cloneConst
-  virtual DevicePtr_t clone() const { return createCopy(weakPtr_.lock()); }
+  virtual DevicePtr_t clone() const { return createCopy(shared_from_this()); }
   /// \brief Clone as a CkwsDevice
   /// Both pinocchio objects model and data are copied.
   /// TODO: this method is not implemented yet (assert if called)
-  DevicePtr_t cloneConst() const { return createCopyConst(weakPtr_.lock()); }
+  DevicePtr_t cloneConst() const { return createCopyConst(shared_from_this()); }
 
-  DevicePtr_t self() const { return weakPtr_.lock(); }
+  DevicePtr_t self() { return shared_from_this(); }
 
   /// Get name of device
   const std::string& name() const { return name_; }
@@ -100,7 +101,7 @@ class HPP_PINOCCHIO_DLLAPI Device : public AbstractDevice {
   /// \param device Device to be copied.
   /// The pinocchio model is not copied (only copy the pointer).
   /// A new Pinocchio "data" is created.
-  static DevicePtr_t createCopy(const DevicePtr_t& device);
+  static DevicePtr_t createCopy(const DeviceConstPtr_t& device);
   static DevicePtr_t createCopyConst(const DeviceConstPtr_t& device);
 
   /// \}
@@ -348,7 +349,6 @@ class HPP_PINOCCHIO_DLLAPI Device : public AbstractDevice {
   ExtraConfigSpace extraConfigSpace_;
   // Joint linear constraints
   std::vector<JointLinearConstraint> jointConstraints_;
-  DeviceWkPtr_t weakPtr_;
 
  private:
   Pool<DeviceData> datas_;
